@@ -298,6 +298,28 @@ internal static class DetectionTests
     }
 
     [Test]
+    public static void CustomRomajiTable_PrefixWaitsForLongerSpelling()
+    {
+        // issue #979: 短い定義とそれを先頭に含む長い定義があるとき、打ちかけは ん・っ・組み込みの綴りで読まずに続きを待つ
+        var table = RomajiDetector.ParseCustomTable("ry\tらい\nryp\tりょう\nngh\tにゅう\n");
+        var romaji = new RomajiDetector(table);
+        // 完成した入力はファイルの行順ではなく最長一致
+        Assert.Equal("らい", romaji.ConvertLenient("ry", final: true));
+        Assert.Equal("りょう", romaji.ConvertLenient("ryp", final: true));
+        Assert.Equal("らいt", romaji.ConvertLenient("ryt", final: true));
+        Assert.Equal("にゅう", romaji.ConvertLenient("ngh", final: true));
+        // 打ちかけは続きを待つ (以前は ng → んg、kk → っk と読んでいた)
+        var mid = romaji.AnalyzeFragment("ng");
+        Assert.True(mid.IsValid && mid.Tokens.Count == 0 && mid.Partial == "ng", "ng は にゅう の打ちかけとして続きを待つ");
+        Assert.Equal("ng", romaji.ConvertLenient("ng", final: false));
+        var kkq = new RomajiDetector(RomajiDetector.ParseCustomTable("kkq\tきゅん\n"));
+        Assert.Equal("kk", kkq.ConvertLenient("kk", final: false));
+        Assert.Equal("きゅん", kkq.ConvertLenient("kkq", final: true));
+        // 前置詞から外れたら今までどおり組み込みの読みに戻る
+        Assert.Equal("んが", romaji.AnalyzeFragment("nga").Kana);
+    }
+
+    [Test]
     public static void CustomRomajiTable_AzikSampleKeepsCommonSpellings()
     {
         // 同梱の AZIK の例 (docs/romaji-azik-sample.txt) を読んでも、ふつうのローマ字の語は今までどおり読める (AZIK では sh は すう なので し は si)

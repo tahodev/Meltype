@@ -251,6 +251,10 @@ public sealed class RomajiDetector
                 continue;
             }
 
+            // 表の綴りの打ちかけ (ngh の ng) で入力が終わっているなら、ん・っ・組み込みの綴りで読まずに続きを待つ (issue #979)
+            if (_custom is not null && CustomPrefixTail(s, i) is { } waiting)
+                return new RomajiAnalysis(true, tokens.ToArray(), waiting, null, strongYouon, tsu, sokuon, longVowels);
+
             if (c == 'n' && i + 1 < s.Length && (s[i + 1] == 'n' || (IsConsonant(s[i + 1]) && s[i + 1] != 'y')))
             {
                 if (i == 0 && strictStart) return Invalid("語頭の「ん」");
@@ -296,6 +300,18 @@ public sealed class RomajiDetector
         }
 
         return new RomajiAnalysis(true, tokens.ToArray(), "", null, strongYouon, tsu, sokuon, longVowels);
+    }
+
+    /// <summary>s の i から末尾までが、ユーザーの表の綴りの打ちかけ (厳密な前置詞で、それ自体は綴りでない) ならその部分。無ければ null。</summary>
+    private string? CustomPrefixTail(string s, int i)
+    {
+        for (var length = Math.Min(_customMaxLength, s.Length - i); length >= 1; length--)
+        {
+            var piece = s.Substring(i, length);
+            if (i + length == s.Length && length < _customMaxLength && _customPartials.Contains(piece) && !_custom!.ContainsKey(piece))
+                return piece;
+        }
+        return null;
     }
 
     /// <summary>s の i から始まる、ユーザーの表のいちばん長い綴り。無ければ null。</summary>
