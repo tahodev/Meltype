@@ -317,6 +317,23 @@ internal static class DetectionTests
         Assert.Equal("きゅん", kkq.ConvertLenient("kkq", final: true));
         // 前置詞から外れたら今までどおり組み込みの読みに戻る
         Assert.Equal("んが", romaji.AnalyzeFragment("nga").Kana);
+        // 確定のときは打ちかけを待たずに組み込みの読みに戻す (ng → んg、kk → っk)
+        Assert.Equal("んg", romaji.ConvertLenient("ng", final: true));
+        Assert.Equal("っk", kkq.ConvertLenient("kk", final: true));
+    }
+
+    [Test]
+    public static void CustomRomajiTable_CompleteBuiltinSpellingDoesNotWait()
+    {
+        // issue #979 レビュー: 組み込みの綴りとして完成している語 (ka など) は、それを先頭に含む
+        // ユーザーの綴り (kaa) があっても待たない。待つのは組み込みの読みが ん・っ になる場合だけ。
+        var romaji = new RomajiDetector(RomajiDetector.ParseCustomTable("kaa\tかあ\n"));
+        Assert.Equal("か", romaji.ConvertLenient("ka", final: false));
+        Assert.Equal("か", romaji.ConvertLenient("ka", final: true));
+        // 完成したユーザーの綴りはこれまでどおり読める
+        Assert.Equal("かあ", romaji.ConvertLenient("kaa", final: true));
+        var mid = romaji.AnalyzeFragment("ka");
+        Assert.True(mid.IsValid && mid.Kana == "か" && mid.Partial.Length == 0, "ka は か と読む (かあ の打ちかけとして待たない)");
     }
 
     [Test]
