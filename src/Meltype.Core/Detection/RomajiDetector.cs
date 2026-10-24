@@ -255,9 +255,10 @@ public sealed class RomajiDetector
             {
                 // ユーザーの表の綴りの打ちかけ (ngh の ng) なら、「ん」と読まずに続きを待つ (issue #979)。
                 // 組み込みの綴りとして完成している語 (ka など) は待たない。対象は ん・っ だけ。
+                // 語頭の「ん」をはじく確認 (strictStart) は待つ処理より先。表を登録していても語頭の ng ははじく (issue #979 レビュー)
+                if (i == 0 && strictStart) return Invalid("語頭の「ん」");
                 if (allowCustomWait && _custom is not null && CustomPrefixTail(s, i) is { } nWaiting)
                     return new RomajiAnalysis(true, tokens.ToArray(), nWaiting, null, strongYouon, tsu, sokuon, longVowels);
-                if (i == 0 && strictStart) return Invalid("語頭の「ん」");
                 var consumed = 1;
                 if (s[i + 1] == 'n' && (composition || i + 2 >= s.Length || !(IsVowel(s[i + 2]) || s[i + 2] == 'y'))) consumed = 2;
                 tokens.Add(new RomajiToken(s.Substring(i, consumed), "ん"));
@@ -269,9 +270,10 @@ public sealed class RomajiDetector
                 (s[i + 1] == c || (c == 't' && s[i + 1] == 'c' && i + 2 < s.Length && s[i + 2] == 'h')))
             {
                 // ユーザーの表の綴りの打ちかけ (kkq の kk) なら、「っ」と読まずに続きを待つ (issue #979)
+                // 語頭の「っ」をはじく確認 (strictStart) は待つ処理より先。表を登録していても語頭の kk ははじく (issue #979 レビュー)
+                if (i == 0 && strictStart) return Invalid("語頭の「っ」");
                 if (allowCustomWait && _custom is not null && CustomPrefixTail(s, i) is { } sWaiting)
                     return new RomajiAnalysis(true, tokens.ToArray(), sWaiting, null, strongYouon, tsu, sokuon, longVowels);
-                if (i == 0 && strictStart) return Invalid("語頭の「っ」");
                 tokens.Add(new RomajiToken(c.ToString(), "っ"));
                 sokuon++;
                 i += 1;

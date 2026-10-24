@@ -323,6 +323,21 @@ internal static class DetectionTests
     }
 
     [Test]
+    public static void CustomRomajiTable_StrictStartDoesNotWait()
+    {
+        // issue #979 レビュー: 語頭の ん・っ をはじく確認 (strictStart) は、表の打ちかけを待つ処理より先。
+        // 表に ngh・kkq を登録していても、語頭の ng・kk はローマ字として正しいと判定されない
+        // (英字かローマ字かの判定に使うので、nginx のような英語の語頭で今までと結果が変わらない)。
+        var romaji = new RomajiDetector(RomajiDetector.ParseCustomTable("ngh\tにゅう\nkkq\tきゅん\n"));
+        Assert.True(!romaji.Analyze("ng").IsValid, "語頭の ng は待たずに語頭の「ん」としてはじく");
+        Assert.True(!romaji.Analyze("kk").IsValid, "語頭の kk は待たずに語頭の「っ」としてはじく");
+        // 語中や打ちかけの表示 (strictStart ではない判定) では、これまでどおり続きを待つ
+        Assert.True(romaji.AnalyzeFragment("ng").IsValid, "打ちかけの ng は にゅう の打ちかけとして待つ");
+        var mid = romaji.AnalyzeFragment("ang");
+        Assert.True(mid.IsValid && mid.Partial == "ng", "語中の ng も続きを待つ");
+    }
+
+    [Test]
     public static void CustomRomajiTable_CompleteBuiltinSpellingDoesNotWait()
     {
         // issue #979 レビュー: 組み込みの綴りとして完成している語 (ka など) は、それを先頭に含む
