@@ -338,6 +338,19 @@ internal static class DetectionTests
     }
 
     [Test]
+    public static void CustomRomajiTable_CommitKeepsUnreadLetters()
+    {
+        // issue #979 レビュー: 確定の再解析で読めなかった文字を捨てない。
+        // 表の打ちかけのまま確定すると、組み込みの読み (ん・っ) の後ろに未処理の文字が残る
+        var romaji = new RomajiDetector(RomajiDetector.ParseCustomTable("ngha\tにゅう\nkkqa\tきゅん\n"));
+        Assert.Equal("んgh", romaji.ConvertLenient("ngh", final: true));
+        Assert.Equal("っkq", romaji.ConvertLenient("kkq", final: true));
+        // 打ちかけの表示では、これまでどおり表の続きを待つ
+        Assert.Equal("ngh", romaji.ConvertLenient("ngh", final: false));
+        Assert.Equal("kkq", romaji.ConvertLenient("kkq", final: false));
+    }
+
+    [Test]
     public static void CustomRomajiTable_CompleteBuiltinSpellingDoesNotWait()
     {
         // issue #979 レビュー: 組み込みの綴りとして完成している語 (ka など) は、それを先頭に含む

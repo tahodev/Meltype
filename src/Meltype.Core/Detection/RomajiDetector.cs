@@ -347,7 +347,16 @@ public sealed class RomajiDetector
                 {
                     var settled = AnalyzeCore(partial, strictStart: false, composition: true, allowCustomWait: false);
                     builder.Append(settled.Kana);
-                    builder.Append(settled.Partial == "n" ? "ん" : settled.Partial);
+                    if (settled.IsValid)
+                    {
+                        builder.Append(settled.Partial == "n" ? "ん" : settled.Partial);
+                    }
+                    else
+                    {
+                        // 再解析で読めなかった文字は捨てずに残す (ngh → んgh、kkq → っkq)
+                        var unread = settled.Tokens.Sum(t => t.Romaji.Length);
+                        builder.Append(partial[unread..]);
+                    }
                     break;
                 }
                 builder.Append(final && partial == "n" ? "ん" : partial);
